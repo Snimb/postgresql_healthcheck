@@ -3,6 +3,8 @@
 # Output file with date and time in the filename
 OUTPUT_FILE="/var/lib/postgresql/miracle_online/script/log/postgresql_report_$(date '+%Y-%m-%d_%H-%M-%S').txt"
 
+PG_TEST_FSYNC_FILE="/var/lib/postgresql/miracle_online/script/log/pg_test_fsync.out"
+
 # Log file path
 LOG_FILE_PATH="/var/log/postgresql"
 
@@ -14,7 +16,7 @@ echo -e "\n--- PostgreSQL Version ---" >> $OUTPUT_FILE
 psql -U postgres -c "SELECT version();" >> $OUTPUT_FILE
 
 # Filesystem usage (like df -h)
-echo -e "\n--- Filesystem Usage (df -h) ---" >> $OUTPUT_FILE
+echo -e "\n--- Filesystem Usage (df -h -T) ---" >> $OUTPUT_FILE
 df -h -T >> $OUTPUT_FILE
 
 # CPU load
@@ -58,10 +60,14 @@ psql -U postgres -c "\x on" -c "SELECT pid, usename, application_name, client_ad
 
 # Memory settings in PostgreSQL
 echo -e "\nPostgreSQL Memory Usage Settings:" >> $OUTPUT_FILE
-psql -U postgres -c "SELECT name, setting, unit FROM pg_settings WHERE name IN ('shared_buffers', 'work_mem', 'maintenance_work_mem');" >> $OUTPUT_FILE
+psql -U postgres -c "SELECT name, setting, unit FROM pg_settings WHERE name IN ('shared_buffers', 'work_mem', 'maintenance_work_mem', 'effective_cache_size', 'wal_buffers', 'effective_io_concurrency', 'min_wal_size', 'max_wal_size', 'max_worker_processes', 'max_parallel_workers_per_gather', 'max_parallel_workers', 'max_parallel_maintenance_workers', 'huge_pages', 'random_page_cost', 'default_statistics_target', 'checkpoint_completion_target', 'max_connections');" >> $OUTPUT_FILE
 
 # Backup checks
 echo -e "\n--- Backup Check (Last 30 Days) ---" >> $OUTPUT_FILE
+
+# pg_test_fsync for best sync method
+echo -e "\npg_test_fsync for best sync method"
+pg_test_fsync -f PG_TEST_FSYNC_FILE >> $OUTPUT_FILE
 
 # Find log files modified in the last 30 days and check for errors
 find $BACKUP_DIR -type f -mtime -30 | while read log_file; do
